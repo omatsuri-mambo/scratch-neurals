@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TurboWarp Neural Nets Extension Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7fb;
+      --paper: #ffffff;
+      --text: #172033;
+      --muted: #5f6d85;
+      --line: #dce2ee;
+      --accent: #1f66e5;
+      --accent-dark: #174aa8;
+      --code-bg: #111827;
+      --code-text: #e9eefb;
+      --soft: #eaf1ff;
+      --warn: #fff4d6;
+      --warn-line: #e6bf4d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.58 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+      gap: 0;
+      min-height: 100vh;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 28px 22px;
+      background: #101827;
+      color: #dce7ff;
+      border-right: 1px solid #26344e;
+    }
+
+    nav h2 {
+      margin: 0 0 18px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    nav a {
+      display: block;
+      padding: 7px 0;
+      color: #dce7ff;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    nav a:hover {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+
+    main {
+      width: min(980px, 100%);
+      padding: 42px 34px 72px;
+    }
+
+    .hero {
+      padding: 34px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 16px 40px rgba(22, 32, 51, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(32px, 5vw, 54px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    section {
+      margin-top: 28px;
+      padding: 28px 34px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 28px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 28px 0 10px;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    h3:first-child {
+      margin-top: 0;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    ul,
+    ol {
+      padding-left: 24px;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: var(--soft);
+      color: var(--accent-dark);
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 14px 0;
+      padding: 16px;
+      overflow: auto;
+      border-radius: 8px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border: 1px solid #22314c;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 14px;
+    }
+
+    .block {
+      margin: 18px 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--accent);
+      border-radius: 8px;
+      background: #fbfcff;
+    }
+
+    .block-title {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent-dark);
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-weight: 700;
+    }
+
+    .note {
+      margin: 16px 0;
+      padding: 14px 16px;
+      border: 1px solid var(--warn-line);
+      border-radius: 8px;
+      background: var(--warn);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 820px) {
+      .layout {
+        display: block;
+      }
+
+      nav {
+        position: static;
+        height: auto;
+      }
+
+      main {
+        padding: 22px 14px 48px;
+      }
+
+      .hero,
+      section {
+        padding: 22px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav aria-label="Guide navigation">
+      <h2>Neural Nets Guide</h2>
+      <a href="#load">Load The Extension</a>
+      <a href="#blocks">Block Guide</a>
+      <a href="#create">Create Networks</a>
+      <a href="#goals">Goals</a>
+      <a href="#training-data">Training Data</a>
+      <a href="#training">Training</a>
+      <a href="#control">Prediction And Control</a>
+      <a href="#viewing">Viewing Training</a>
+      <a href="#fail">Fail Conditions</a>
+      <a href="#saving">Saving And Info</a>
+      <a href="#tutorial">Sprite Tutorial</a>
+      <a href="#input-format">Input Format</a>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <h1>TurboWarp Neural Nets Extension</h1>
+        <p class="lead">A browser-readable guide for the TurboWarp extension that creates neural networks, trains them, controls sprites, shows training examples, and visualizes the network's thinking process.</p>
+      </header>
+
+      <section id="load">
+        <h2>Load The Extension</h2>
+        <p>This folder contains a standalone TurboWarp custom extension:</p>
+        <pre><code>neural-network-extension.js</code></pre>
+        <ol>
+          <li>Open TurboWarp.</li>
+          <li>Open Extensions.</li>
+          <li>Choose Custom Extension.</li>
+          <li>Load <code>neural-network-extension.js</code>.</li>
+        </ol>
+        <p>If TurboWarp asks for a URL, use a hosted copy of the file or the local server URL:</p>
+        <pre><code>http://127.0.0.1:8017/neural-network-extension.js</code></pre>
+        <p>If TurboWarp keeps showing an older block list, reload the project and use this versioned URL:</p>
+        <pre><code>http://127.0.0.1:8017/neural-network-extension.js?v=learn-failure1</code></pre>
+        <p>The extension adds a small <code>Neural Thinking</code> button near the stage. Press it while the project runs to see inputs, hidden neurons, outputs, loss, goal, fail state, and training ghost status.</p>
+      </section>
+
+      <section id="blocks">
+        <h2>Block Guide</h2>
+        <p>Use this section as the reference for every block in the extension.</p>
+
+        <h3 id="create">Create And Configure Networks</h3>
+        <div class="block">
+          <span class="block-title">make neural net [NAME] inputs [INPUTS] hidden [HIDDEN] outputs [OUTPUTS] rate [RATE]</span>
+          <p>Creates a normal neural network. Use this for learning functions or custom input/output examples.</p>
+          <pre><code>make neural net net inputs 1 hidden 8,8 outputs 1 rate 0.03</code></pre>
+        </div>
+
+        <div class="block">
+          <span class="block-title">make sprite controller [NAME] hidden [HIDDEN] rate [RATE]</span>
+          <p>Creates a controller network made for moving a sprite toward a goal. It always uses four inputs and two outputs.</p>
+          <div class="grid">
+            <pre><code>inputs:
+sprite x
+sprite y
+goal x
+goal y</code></pre>
+            <pre><code>outputs:
+x movement
+y movement</code></pre>
+          </div>
+          <pre><code>make sprite controller controller hidden 12,8 rate 0.04</code></pre>
+        </div>
+
+        <div class="block">
+          <span class="block-title">set [NAME] hidden activation to [ACTIVATION]</span>
+          <p>Changes the hidden layer activation. Options are <code>tanh</code>, <code>relu</code>, <code>sigmoid</code>, and <code>linear</code>. <code>tanh</code> is usually a good default.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">set [NAME] learning rate to [RATE]</span>
+          <p>Changes how quickly the network learns. Lower it if learning is unstable. Raise it a little if learning is too slow.</p>
+        </div>
+
+        <h3 id="goals">Goals</h3>
+        <div class="block">
+          <span class="block-title">set [NAME] goal to x [X] y [Y]</span>
+          <p>Sets a sprite controller's goal to a stage position.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">set [NAME] goal to touching sprite [SPRITE]</span>
+          <p>Sets a sprite controller's goal to another sprite. Type the sprite's exact name into the block.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">[NAME] goal reached?</span>
+          <p>Reports true when the current sprite reaches the controller's goal. For a sprite goal, this checks whether the moving sprite is touching the goal sprite.</p>
+        </div>
+
+        <h3 id="training-data">Training Data</h3>
+        <div class="block">
+          <span class="block-title">add training pair to [NAME] inputs [INPUTS] outputs [OUTPUTS]</span>
+          <p>Adds one example for the network to learn from. Inputs and outputs can be single numbers, comma-separated lists, or JSON arrays.</p>
+          <pre><code>inputs 0.5 outputs 0.25
+inputs 0.2, -0.8 outputs 1, 0
+inputs [0.2, -0.8] outputs [1, 0]</code></pre>
+        </div>
+
+        <div class="block">
+          <span class="block-title">clear training data for [NAME]</span>
+          <p>Deletes all saved training examples for that network.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">training pair count for [NAME]</span>
+          <p>Reports how many training examples the network has.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">add function samples to [NAME] y = [FORMULA] x from [START] to [END] samples [COUNT]</span>
+          <p>Creates training examples from a formula such as <code>x * x</code> or <code>sin(x)</code>.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">train [NAME] to y = [FORMULA] x from [START] to [END] samples [COUNT] epochs [EPOCHS]</span>
+          <p>Adds formula samples and trains on them immediately.</p>
+          <pre><code>x * x
+sin(x)
+cos(x * pi)
+sqrt(abs(x))</code></pre>
+          <p class="small">Supported helpers: <code>sin</code>, <code>cos</code>, <code>tan</code>, <code>abs</code>, <code>sqrt</code>, <code>round</code>, <code>floor</code>, <code>ceil</code>, <code>min</code>, <code>max</code>, <code>pow</code>, <code>log</code>, and <code>exp</code>. Constants <code>pi</code>, <code>PI</code>, <code>e</code>, and <code>E</code> also work.</p>
+        </div>
+
+        <h3 id="training">Training</h3>
+        <div class="block">
+          <span class="block-title">train [NAME] for [EPOCHS] epochs</span>
+          <p>Trains a network using its saved training examples. One epoch means one pass through the saved examples.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">train [NAME] once on inputs [INPUTS] outputs [OUTPUTS]</span>
+          <p>Immediately trains on one example without saving it first.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">train [NAME] controller with [SAMPLES] goal samples for [EPOCHS] epochs</span>
+          <p>Creates random controller examples around the stage and trains the controller to move from those positions toward its current goal.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">pretrain [NAME] from this sprite rounds [ROUNDS] samples [SAMPLES] epochs [EPOCHS]</span>
+          <p>Runs simulated practice attempts before the real sprite starts moving. If the simulated run hits danger or takes too long, it adds more danger-aware examples and trains again. Run this block on the <code>Player</code> sprite after placing it at its starting position.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">[NAME] pretrain succeeded?</span>
+          <p>Reports true if the last pretrain run found a simulated route to the goal.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">pretrain info for [NAME]</span>
+          <p>Reports whether pretraining succeeded, how many rounds it used, and why it stopped.</p>
+        </div>
+
+        <h3 id="control">Prediction And Sprite Control</h3>
+        <div class="block">
+          <span class="block-title">prediction from [NAME] inputs [INPUTS] output [INDEX]</span>
+          <p>Runs the network and reports one output number. Output index starts at <code>1</code>.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">prediction list from [NAME] inputs [INPUTS]</span>
+          <p>Runs the network and reports all output numbers as a comma-separated list.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">control this sprite with [NAME] speed [SPEED] train [TRAIN] samples</span>
+          <p>Moves the sprite running the block using the controller network. This now behaves like steering: the sprite turns a little toward the network's chosen direction, then moves forward. It also optionally adds a few fresh training samples every time it runs.</p>
+          <p>Use this inside a <code>forever</code> loop on the sprite you want the network to control.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">steer this sprite with [NAME] speed [SPEED] turn [TURN] train [TRAIN] samples</span>
+          <p>Moves the sprite like a small robot or car. The network chooses a direction, but the sprite can only turn up to <code>TURN</code> degrees and then move forward by <code>SPEED</code>.</p>
+          <p>Use this if it appears in your block list and you want to choose the turn amount yourself. If it does not appear, use <code>control this sprite with...</code>; it uses a default turn amount.</p>
+        </div>
+
+        <h3 id="viewing">Viewing Training And Thinking</h3>
+        <div class="block">
+          <span class="block-title">show training ghosts for [NAME] limit [LIMIT] ghost [GHOST]</span>
+          <p>Shows transparent training examples over the stage. Each dot is one training position, and the short line shows the movement direction the network is learning.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">hide training ghosts for [NAME] limit [LIMIT] ghost [GHOST]</span>
+          <p>Hides the transparent training examples. <code>ghost</code> acts like transparency, so higher numbers are more transparent.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">show pretraining view for [NAME]</span>
+          <p>Shows the saved simulated pretraining paths over the stage. This view includes a disclaimer so you know it is only the pretraining preview and the real sprite did not move there.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">hide pretraining view for [NAME]</span>
+          <p>Hides the simulated pretraining paths.</p>
+        </div>
+
+        <div class="note">
+          The <code>Neural Thinking</code> button is not a Scratch block. It appears near the stage and opens a live viewer for inputs, hidden neurons, outputs, loss, goal, fail state, and training ghosts.
+        </div>
+
+        <h3 id="fail">Fail Conditions</h3>
+        <div class="block">
+          <span class="block-title">set [NAME] fail if touching sprite [SPRITE]</span>
+          <p>Makes the controller fail when the moving sprite touches a named sprite.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">set [NAME] time limit to [SECONDS] seconds</span>
+          <p>Makes the controller fail if the run takes too long.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">reset [NAME] run timer and fail state</span>
+          <p>Starts a new run by clearing the fail state and restarting the timer.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">[NAME] failed?</span>
+          <p>Reports true if the controller has failed.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">fail reason for [NAME]</span>
+          <p>Reports why the controller failed, such as <code>touching Danger</code> or <code>time limit</code>.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">learn from [NAME] failure samples [SAMPLES] epochs [EPOCHS]</span>
+          <p>Use this in the <code>if [NAME] failed?</code> branch. It looks at the latest failure, adds focused training examples around that bad situation, trains more, and clears the fail state so the sprite can try to recover.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">failure learning info for [NAME]</span>
+          <p>Reports how many failure repairs have happened and what the latest repair learned from.</p>
+        </div>
+
+        <p>When a controller has failed, <code>control this sprite with [NAME] ...</code> and <code>steer this sprite with [NAME] ...</code> stop moving the sprite.</p>
+
+        <h3 id="saving">Saving And Info</h3>
+        <div class="block">
+          <span class="block-title">last loss for [NAME]</span>
+          <p>Reports the network's most recent training loss. Lower is usually better.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">randomize [NAME]</span>
+          <p>Resets the network's weights while keeping its settings and saved training examples.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">export [NAME] as JSON</span>
+          <p>Reports a JSON string containing the network's weights, training data, goal, fail settings, and viewer settings.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">import [NAME] from JSON [JSON]</span>
+          <p>Loads a network from exported JSON.</p>
+        </div>
+
+        <div class="block">
+          <span class="block-title">info for [NAME]</span>
+          <p>Reports the network's shape, learning rate, training pair count, and loss.</p>
+        </div>
+      </section>
+
+      <section id="tutorial">
+        <h2>Tutorial: Make A Steering Sprite Reach A Differently Colored Sprite</h2>
+        <p>This tutorial makes one sprite learn to steer toward another sprite. The moving sprite can be blue, and the goal sprite can be red, green, yellow, or any different color.</p>
+        <p class="note">The player sprite should not teleport to the goal. It can only turn left or right and move forward. The network has to learn which way to steer.</p>
+
+        <h3>1. Make The Sprites</h3>
+        <ol>
+          <li>Create or choose a sprite that will move.</li>
+          <li>Rename it <code>Player</code>.</li>
+          <li>Change its costume color to blue.</li>
+          <li>Create a second sprite.</li>
+          <li>Rename it <code>Goal</code>.</li>
+          <li>Change its costume color to a different color, such as red.</li>
+          <li>Put <code>Goal</code> somewhere on the stage, for example <code>x: 150, y: 60</code>.</li>
+        </ol>
+        <p class="note">The names matter. The goal block uses the typed sprite name <code>Goal</code>.</p>
+
+        <h3>2. Add Setup Blocks To The Stage</h3>
+        <p>On the Stage, make this script:</p>
+        <pre><code>when green flag clicked
+make sprite controller controller hidden 12,8 rate 0.04
+set controller goal to touching sprite Goal
+train controller controller with 250 goal samples for 60 epochs
+show training ghosts for controller limit 150 ghost 75
+show pretraining view for controller
+reset controller run timer and fail state</code></pre>
+        <p>This creates the controller, tells it to reach <code>Goal</code>, trains from random stage positions, shows transparent training examples, and resets the run timer.</p>
+
+        <h3>3. Add Steering Blocks To Player</h3>
+        <p>On the <code>Player</code> sprite, make this script:</p>
+<pre><code>when green flag clicked
+go to x -180 y -120
+point in direction 90
+pretrain controller from this sprite rounds 20 samples 120 epochs 20
+reset controller run timer and fail state
+forever
+  if not controller goal reached? then
+    control this sprite with controller speed 4 train 2 samples
+  end
+end</code></pre>
+        <p>The <code>go to x -180 y -120</code> block is only the starting position reset. After that, the sprite should not use <code>go to</code> or <code>glide</code> to reach the goal. It should move with the neural steering block.</p>
+        <p>Press the green flag. The blue <code>Player</code> should start turning and moving forward toward the differently colored <code>Goal</code> sprite.</p>
+
+        <h3>4. Stop When The Goal Is Reached</h3>
+        <p>You can make the sprite say something when it reaches the goal:</p>
+<pre><code>when green flag clicked
+go to x -180 y -120
+point in direction 90
+pretrain controller from this sprite rounds 20 samples 120 epochs 20
+reset controller run timer and fail state
+forever
+  if controller goal reached? then
+    say Reached it!
+  else
+    control this sprite with controller speed 4 train 2 samples
+  end
+end</code></pre>
+
+        <h3>5. Add A Danger Sprite To Steer Around</h3>
+        <p>Create another sprite named <code>Danger</code>. Give it a different color, such as purple, and place it between <code>Player</code> and <code>Goal</code>.</p>
+        <p>The network will be trained to steer away from this sprite when it is near it. If the player touches <code>Danger</code>, the run fails.</p>
+        <p>Add these blocks to the Stage setup script:</p>
+        <pre><code>set controller fail if touching sprite Danger
+set controller time limit to 15 seconds</code></pre>
+        <p>The full setup can look like this:</p>
+        <pre><code>when green flag clicked
+make sprite controller controller hidden 12,8 rate 0.04
+set controller goal to touching sprite Goal
+set controller fail if touching sprite Danger
+set controller time limit to 15 seconds
+train controller controller with 500 goal samples for 100 epochs
+show training ghosts for controller limit 150 ghost 75
+show pretraining view for controller
+reset controller run timer and fail state</code></pre>
+        <p>On the <code>Player</code> sprite, use:</p>
+<pre><code>when green flag clicked
+go to x -180 y -120
+point in direction 90
+pretrain controller from this sprite rounds 30 samples 160 epochs 25
+reset controller run timer and fail state
+forever
+  if not controller pretrain succeeded? then
+    say pretrain info for controller
+  else
+    if controller failed? then
+      learn from controller failure samples 120 epochs 20
+      say failure learning info for controller
+    else
+      if controller goal reached? then
+        say Reached it!
+      else
+        control this sprite with controller speed 4 train 3 samples
+      end
+    end
+  end
+end</code></pre>
+        <p>The pretrain check makes the sprite wait if the controller still has not found a safe simulated route.</p>
+        <p>The failure-learning block lets the sprite keep improving even if pretraining was not enough. If it hits <code>Danger</code>, it learns from that collision and then gets a chance to steer clear.</p>
+
+        <h3>6. Watch The Network Think</h3>
+        <p>Press the <code>Neural Thinking</code> button near the stage while the project runs.</p>
+        <ul>
+          <li><code>inputs</code>: the current <code>Player</code> position and <code>Goal</code> position.</li>
+          <li><code>hidden</code>: the hidden neurons activating.</li>
+          <li><code>outputs</code>: the direction the network wants the sprite to steer toward.</li>
+          <li><code>loss</code>: how well the network is matching its training examples.</li>
+          <li><code>goal</code>: the goal sprite or point.</li>
+          <li><code>fail</code>: whether it has hit a fail condition.</li>
+        </ul>
+        <p>Use <code>show pretraining view for controller</code> to draw the simulated practice paths over the stage. When this view is on, the stage shows the disclaimer <code>Pretraining preview only - the real sprite is not moving here.</code></p>
+
+        <h3>7. Tune It</h3>
+        <ul>
+          <li>Increase training: <code>train controller controller with 500 goal samples for 100 epochs</code>.</li>
+          <li>Increase pretraining: <code>pretrain controller from this sprite rounds 50 samples 200 epochs 30</code>.</li>
+          <li>Slow movement down: use speed <code>3</code>.</li>
+          <li>If you have the <code>steer this sprite with...</code> block, allow sharper turns by increasing turn to <code>18</code>.</li>
+          <li>If you have the <code>steer this sprite with...</code> block, make steering smoother by decreasing turn to <code>8</code>.</li>
+          <li>Train more while moving: use <code>train 5 samples</code>.</li>
+          <li>Learn harder from failures: <code>learn from controller failure samples 200 epochs 30</code>.</li>
+          <li>Make hidden layers bigger: <code>hidden 16,12</code>.</li>
+          <li>Hide the ghost overlay after checking it: <code>hide training ghosts for controller limit 150 ghost 75</code>.</li>
+          <li>Hide the pretraining preview after checking it: <code>hide pretraining view for controller</code>.</li>
+        </ul>
+      </section>
+
+      <section id="input-format">
+        <h2>Input Format</h2>
+        <p>Single-input networks can use plain numbers:</p>
+        <pre><code>0.5</code></pre>
+        <p>Multi-input networks use comma-separated numbers:</p>
+        <pre><code>0.2, -0.8, 1</code></pre>
+        <p>JSON arrays also work:</p>
+        <pre><code>[0.2, -0.8, 1]</code></pre>
+        <p>For best results with function learning, keep input and output numbers near <code>-1</code> to <code>1</code>. If your real values are large, scale them down before training and scale predictions back up in your Scratch project.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

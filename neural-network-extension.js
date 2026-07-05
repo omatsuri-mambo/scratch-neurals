@@ -145,6 +145,16 @@
         samples: 0,
         epochs: 0,
       },
+      customMove: {
+        requested: false,
+        reason: "not requested",
+        desiredDirection: 90,
+        desiredTurn: 0,
+        desiredX: 0,
+        desiredY: 0,
+        speed: 4,
+        train: 0,
+      },
       lastInputs: [],
       lastPrediction: [],
       lastActivations: [],
@@ -314,7 +324,7 @@
     }
   };
 
-  const addFunctionSamples = (network, formula, start, end, count) => {
+  const addFunctionSamples = (network, formula, start, end, count, owner) => {
     const sampleCount = clampInteger(count, 2, 10000);
     const first = Number(start);
     const last = Number(end);
@@ -323,10 +333,7 @@
 
     for (let i = 0; i < sampleCount; i += 1) {
       const x = sampleCount === 1 ? from : from + ((to - from) * i) / (sampleCount - 1);
-      network.samples.push({
-        inputs: normalizeInputs(network, [x]),
-        outputs: normalizeOutputs(network, [evaluateFormula(formula, x)]),
-      });
+      network.samples.push(ownedSample(network, [x], [evaluateFormula(formula, x)], owner));
     }
   };
 
@@ -342,6 +349,48 @@
     if (typeof target.getName === "function") return target.getName();
     return target.name || "";
   };
+
+  const ownerInfoFromUtil = (util) => {
+    const target = util && util.target;
+    if (!target) {
+      return { key: "stage", id: "stage", name: "Stage", isClone: false };
+    }
+
+    const name = targetName(target) || "Sprite";
+    const id =
+      target.id ||
+      target.targetId ||
+      target.drawableID ||
+      (target.isOriginal === false ? `clone-${name}` : `original-${name}`);
+    return {
+      key: `${name}:${id}`,
+      id: String(id),
+      name,
+      isClone: target.isOriginal === false,
+    };
+  };
+
+  const ownerQuery = (value, util) => {
+    const text = String(value || "").trim();
+    if (!text || text.toLowerCase() === "this" || text.toLowerCase() === "this sprite") {
+      return ownerInfoFromUtil(util).key;
+    }
+    return text;
+  };
+
+  const sampleMatchesOwner = (sample, owner) => {
+    if (!owner || owner.toLowerCase() === "all") return true;
+    const meta = sample && sample.owner;
+    if (!meta) return owner.toLowerCase() === "unowned";
+    return meta.key === owner || meta.id === owner || meta.name === owner;
+  };
+
+  const ownedSample = (network, inputs, outputs, owner) => ({
+    inputs: normalizeInputs(network, inputs),
+    outputs: normalizeOutputs(network, outputs),
+    owner,
+    createdAt: Date.now(),
+  });
 
   const findTargetByName = (name, util) => {
     const spriteName = String(name || "").trim();
@@ -441,14 +490,19 @@
   const addControllerSamples = (network, count, util) => {
     const samples = clampInteger(count, 1, 10000);
     const goal = goalPosition(network, util);
+    const owner = ownerInfoFromUtil(util);
 
     for (let i = 0; i < samples; i += 1) {
       const spriteX = Math.random() * STAGE_HALF_WIDTH * 2 - STAGE_HALF_WIDTH;
       const spriteY = Math.random() * STAGE_HALF_HEIGHT * 2 - STAGE_HALF_HEIGHT;
-      network.samples.push({
-        inputs: normalizedSpriteInputs(spriteX, spriteY, goal.x, goal.y),
-        outputs: directionToGoalAvoidingDanger(spriteX, spriteY, goal.x, goal.y, network, util),
-      });
+      network.samples.push(
+        ownedSample(
+          network,
+          normalizedSpriteInputs(spriteX, spriteY, goal.x, goal.y),
+          directionToGoalAvoidingDanger(spriteX, spriteY, goal.x, goal.y, network, util),
+          owner
+        )
+      );
     }
   };
 
@@ -459,6 +513,7 @@
     const goal = goalPosition(network, util);
     const fail = network.fail || {};
     const danger = fail.spriteName ? findTargetByName(fail.spriteName, util) : null;
+    const owner = ownerInfoFromUtil(util);
 
     for (let i = 0; i < samples; i += 1) {
       let spriteX;
@@ -479,10 +534,14 @@
 
       spriteX = clampNumber(spriteX, 0, -STAGE_HALF_WIDTH, STAGE_HALF_WIDTH);
       spriteY = clampNumber(spriteY, 0, -STAGE_HALF_HEIGHT, STAGE_HALF_HEIGHT);
-      network.samples.push({
-        inputs: normalizedSpriteInputs(spriteX, spriteY, goal.x, goal.y),
-        outputs: directionToGoalAvoidingDanger(spriteX, spriteY, goal.x, goal.y, network, util),
-      });
+      network.samples.push(
+        ownedSample(
+          network,
+          normalizedSpriteInputs(spriteX, spriteY, goal.x, goal.y),
+          directionToGoalAvoidingDanger(spriteX, spriteY, goal.x, goal.y, network, util),
+          owner
+        )
+      );
     }
   };
 
@@ -622,6 +681,7 @@
     const goal = goalPosition(network, util);
     const fail = network.fail || {};
     const danger = fail.spriteName ? findTargetByName(fail.spriteName, util) : null;
+    const owner = ownerInfoFromUtil(util);
 
     for (let i = 0; i < samples; i += 1) {
       let spriteX = failState.x;
@@ -639,10 +699,14 @@
 
       spriteX = clampNumber(spriteX, 0, -STAGE_HALF_WIDTH, STAGE_HALF_WIDTH);
       spriteY = clampNumber(spriteY, 0, -STAGE_HALF_HEIGHT, STAGE_HALF_HEIGHT);
-      network.samples.push({
-        inputs: normalizedSpriteInputs(spriteX, spriteY, goal.x, goal.y),
-        outputs: directionToGoalAvoidingDanger(spriteX, spriteY, goal.x, goal.y, network, util),
-      });
+      network.samples.push(
+        ownedSample(
+          network,
+          normalizedSpriteInputs(spriteX, spriteY, goal.x, goal.y),
+          directionToGoalAvoidingDanger(spriteX, spriteY, goal.x, goal.y, network, util),
+          owner
+        )
+      );
     }
   };
 
@@ -683,11 +747,92 @@
     return network.recovery;
   };
 
+  const exportTrainingPacket = (network, name, owner) => {
+    const samples = network.samples
+      .filter((sample) => sampleMatchesOwner(sample, owner))
+      .map((sample) => ({
+        inputs: normalizeInputs(network, Array.isArray(sample.inputs) ? sample.inputs : []),
+        outputs: normalizeOutputs(network, Array.isArray(sample.outputs) ? sample.outputs : []),
+        owner: sample.owner || null,
+        createdAt: sample.createdAt || null,
+      }));
+
+    return JSON.stringify({
+      type: "scratch-neurals-training",
+      version: 1,
+      network: cleanName(name),
+      owner,
+      inputSize: network.inputSize,
+      outputSize: network.outputSize,
+      count: samples.length,
+      samples,
+    });
+  };
+
+  const importTrainingPacket = (network, json, util) => {
+    try {
+      const packet = JSON.parse(String(json || "{}"));
+      const incoming = Array.isArray(packet)
+        ? packet
+        : Array.isArray(packet.samples)
+          ? packet.samples
+          : [];
+      const importer = ownerInfoFromUtil(util);
+      let count = 0;
+
+      for (const sample of incoming) {
+        if (!sample || !Array.isArray(sample.inputs) || !Array.isArray(sample.outputs)) continue;
+        network.samples.push({
+          inputs: normalizeInputs(network, sample.inputs.map(Number).filter(Number.isFinite)),
+          outputs: normalizeOutputs(network, sample.outputs.map(Number).filter(Number.isFinite)),
+          owner: sample.owner || {
+            key: `imported-by-${importer.key}`,
+            id: importer.id,
+            name: importer.name,
+            isClone: importer.isClone,
+          },
+          importedBy: importer,
+          importedAt: Date.now(),
+          createdAt: sample.createdAt || Date.now(),
+        });
+        count += 1;
+      }
+
+      network.lastImport = {
+        count,
+        from: packet.owner || "unknown",
+        importedBy: importer.key,
+      };
+      return count;
+    } catch (_error) {
+      network.lastImport = {
+        count: 0,
+        from: "invalid JSON",
+        importedBy: ownerInfoFromUtil(util).key,
+      };
+      return 0;
+    }
+  };
+
   const runSteeringController = (args, util, defaultTurn) => {
     const network = ensureControllerNetwork(args.NAME);
     const target = util && util.target;
-    if (!target || target.isStage) return;
-    if (checkFailConditions(network, util)) return;
+    if (!target || target.isStage) {
+      network.customMove = {
+        ...(network.customMove || {}),
+        requested: false,
+        reason: "no sprite",
+      };
+      return;
+    }
+    if (checkFailConditions(network, util)) {
+      network.customMove = {
+        ...(network.customMove || {}),
+        requested: false,
+        reason: (network.fail && network.fail.reason) || "failed",
+      };
+      return;
+    }
 
     const trainSamples = clampInteger(args.TRAIN, 0, 1000);
     if (trainSamples > 0) {
@@ -695,7 +840,14 @@
       trainEpoch(network);
     }
 
-    if (isGoalReached(network, util)) return;
+    if (isGoalReached(network, util)) {
+      network.customMove = {
+        ...(network.customMove || {}),
+        requested: false,
+        reason: "goal reached",
+      };
+      return;
+    }
 
     const goal = goalPosition(network, util);
     const inputs = normalizedSpriteInputs(target.x || 0, target.y || 0, goal.x, goal.y);
@@ -708,9 +860,90 @@
     const currentDirection = Number.isFinite(Number(target.direction)) ? Number(target.direction) : 90;
     const maxTurn = clampNumber(args.TURN, defaultTurn, 0, 180);
     const turn = clampNumber(angleDifference(currentDirection, desiredDirection), 0, -maxTurn, maxTurn);
+    const speed = clampNumber(args.SPEED, 4, 0, 50);
+    network.customMove = {
+      requested: true,
+      reason: "move",
+      desiredDirection,
+      desiredTurn: turn,
+      desiredX: clampNumber(output[0], 0, -1, 1),
+      desiredY: clampNumber(output[1], 0, -1, 1),
+      speed,
+      train: trainSamples,
+      turnLimit: maxTurn,
+      owner: ownerInfoFromUtil(util),
+      createdAt: Date.now(),
+    };
     setTargetDirection(target, currentDirection + turn);
-    moveTargetForward(target, clampNumber(args.SPEED, 4, 0, 50));
+    moveTargetForward(target, speed);
     checkFailConditions(network, util);
+  };
+
+  const computeCustomMoveIntent = (args, util, defaultTurn) => {
+    const network = ensureControllerNetwork(args.NAME);
+    const target = util && util.target;
+    if (!target || target.isStage) {
+      network.customMove = {
+        ...(network.customMove || {}),
+        requested: false,
+        reason: "no sprite",
+      };
+      return network.customMove;
+    }
+    if (checkFailConditions(network, util)) {
+      network.customMove = {
+        ...(network.customMove || {}),
+        requested: false,
+        reason: (network.fail && network.fail.reason) || "failed",
+      };
+      return network.customMove;
+    }
+    if (isGoalReached(network, util)) {
+      network.customMove = {
+        ...(network.customMove || {}),
+        requested: false,
+        reason: "goal reached",
+      };
+      return network.customMove;
+    }
+
+    const trainSamples = clampInteger(args.TRAIN, 0, 1000);
+    if (trainSamples > 0) {
+      addControllerSamples(network, trainSamples, util);
+      trainEpoch(network);
+    }
+
+    const goal = goalPosition(network, util);
+    const inputs = normalizedSpriteInputs(target.x || 0, target.y || 0, goal.x, goal.y);
+    const activations = forward(network, inputs);
+    const output = activations[activations.length - 1];
+    const desiredX = clampNumber(output[0], 0, -1, 1);
+    const desiredY = clampNumber(output[1], 0, -1, 1);
+    const desiredDirection = vectorToScratchDirection(desiredX, desiredY);
+    const currentDirection = Number.isFinite(Number(target.direction)) ? Number(target.direction) : 90;
+    const maxTurn = clampNumber(args.TURN, defaultTurn, 0, 180);
+    const desiredTurn = clampNumber(
+      angleDifference(currentDirection, desiredDirection),
+      0,
+      -maxTurn,
+      maxTurn
+    );
+
+    network.customMove = {
+      requested: true,
+      reason: "move",
+      desiredDirection,
+      desiredTurn,
+      desiredX,
+      desiredY,
+      speed: clampNumber(args.SPEED, 4, 0, 50),
+      train: trainSamples,
+      turnLimit: maxTurn,
+      owner: ownerInfoFromUtil(util),
+      createdAt: Date.now(),
+    };
+
+    return network.customMove;
   };
 
   const isGoalReached = (network, util) => {
@@ -953,6 +1186,12 @@
         : `x ${shortNumber(goal.x)}, y ${shortNumber(goal.y)}`;
     const fail = network.fail || {};
     const failText = fail.failed ? fail.reason || "failed" : "none";
+    const move = network.customMove || {};
+    const moveText = move.requested
+      ? `direction ${shortNumber(move.desiredDirection)}, turn ${shortNumber(
+          move.desiredTurn
+        )}, vector ${shortNumber(move.desiredX)}, ${shortNumber(move.desiredY)}`
+      : move.reason || "not requested";
     const ghostText =
       network.trainingGhosts && network.trainingGhosts.visible
         ? `showing ${network.trainingGhosts.limit} samples`
@@ -982,6 +1221,7 @@
         <div>shape: ${network.inputSize} -> ${network.hiddenSizes.join(" -> ")} -> ${network.outputSize}</div>
         <div>goal: ${goalText}</div>
         <div>fail: ${failText}</div>
+        <div>custom move: ${moveText}</div>
         <div>training ghosts: ${ghostText}</div>
         <div>pretraining view: ${
           network.pretrain && network.pretrain.visible ? "showing preview only" : "hidden"
@@ -1176,6 +1416,46 @@
             },
           },
           {
+            opcode: "trainingOwnerId",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "training id for this sprite/clone",
+          },
+          {
+            opcode: "ownedTrainingCount",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "training pair count for [NAME] from [OWNER]",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: DEFAULT_NAME },
+              OWNER: { type: Scratch.ArgumentType.STRING, defaultValue: "this" },
+            },
+          },
+          {
+            opcode: "exportTrainingForOwner",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "export [NAME] training from [OWNER]",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: DEFAULT_NAME },
+              OWNER: { type: Scratch.ArgumentType.STRING, defaultValue: "this" },
+            },
+          },
+          {
+            opcode: "importTrainingPacketBlock",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "import training into [NAME] from JSON [JSON]",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: DEFAULT_NAME },
+              JSON: { type: Scratch.ArgumentType.STRING, defaultValue: "{}" },
+            },
+          },
+          {
+            opcode: "lastTrainingImportInfo",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "last training import info for [NAME]",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: DEFAULT_NAME },
+            },
+          },
+          {
             opcode: "train",
             blockType: Scratch.BlockType.COMMAND,
             text: "train [NAME] for [EPOCHS] epochs",
@@ -1275,6 +1555,85 @@
               SPEED: { type: Scratch.ArgumentType.NUMBER, defaultValue: 4 },
               TURN: { type: Scratch.ArgumentType.NUMBER, defaultValue: 12 },
               TRAIN: { type: Scratch.ArgumentType.NUMBER, defaultValue: 2 },
+            },
+          },
+          {
+            opcode: "withCustomMovement",
+            blockType: Scratch.BlockType.CONDITIONAL || Scratch.BlockType.COMMAND,
+            branchCount: 1,
+            text: "with [NAME] custom movement speed [SPEED] turn [TURN] train [TRAIN] samples",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
+              SPEED: { type: Scratch.ArgumentType.NUMBER, defaultValue: 4 },
+              TURN: { type: Scratch.ArgumentType.NUMBER, defaultValue: 12 },
+              TRAIN: { type: Scratch.ArgumentType.NUMBER, defaultValue: 2 },
+            },
+          },
+          {
+            opcode: "chooseCustomMove",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "ask [NAME] for custom move speed [SPEED] turn [TURN] train [TRAIN] samples",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
+              SPEED: { type: Scratch.ArgumentType.NUMBER, defaultValue: 4 },
+              TURN: { type: Scratch.ArgumentType.NUMBER, defaultValue: 12 },
+              TRAIN: { type: Scratch.ArgumentType.NUMBER, defaultValue: 2 },
+            },
+          },
+          {
+            opcode: "customMoveReady",
+            blockType: Scratch.BlockType.BOOLEAN || Scratch.BlockType.REPORTER,
+            text: "[NAME] custom move ready?",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
+            },
+          },
+          {
+            opcode: "customMoveDirection",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[NAME] custom move direction",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
+            },
+          },
+          {
+            opcode: "customMoveTurn",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[NAME] custom move turn",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
+            },
+          },
+          {
+            opcode: "customMoveX",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[NAME] custom move x",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
+            },
+          },
+          {
+            opcode: "customMoveY",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[NAME] custom move y",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
+            },
+          },
+          {
+            opcode: "customMoveSpeed",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[NAME] custom move speed",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
+            },
+          },
+          {
+            opcode: "customMoveReason",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "[NAME] custom move reason",
+            arguments: {
+              NAME: { type: Scratch.ArgumentType.STRING, defaultValue: "controller" },
             },
           },
           {
@@ -1496,12 +1855,16 @@
       return isGoalReached(ensureControllerNetwork(args.NAME), util);
     }
 
-    addTrainingPair(args) {
+    addTrainingPair(args, util) {
       const network = ensureNetwork(args.NAME);
-      network.samples.push({
-        inputs: normalizeInputs(network, parseNumberList(args.INPUTS)),
-        outputs: normalizeOutputs(network, parseNumberList(args.OUTPUTS)),
-      });
+      network.samples.push(
+        ownedSample(
+          network,
+          parseNumberList(args.INPUTS),
+          parseNumberList(args.OUTPUTS),
+          ownerInfoFromUtil(util)
+        )
+      );
     }
 
     clearTrainingData(args) {
@@ -1512,6 +1875,31 @@
 
     trainingCount(args) {
       return ensureNetwork(args.NAME).samples.length;
+    }
+
+    trainingOwnerId(_args, util) {
+      return ownerInfoFromUtil(util).key;
+    }
+
+    ownedTrainingCount(args, util) {
+      const network = ensureNetwork(args.NAME);
+      const owner = ownerQuery(args.OWNER, util);
+      return network.samples.filter((sample) => sampleMatchesOwner(sample, owner)).length;
+    }
+
+    exportTrainingForOwner(args, util) {
+      const network = ensureNetwork(args.NAME);
+      return exportTrainingPacket(network, args.NAME, ownerQuery(args.OWNER, util));
+    }
+
+    importTrainingPacketBlock(args, util) {
+      importTrainingPacket(ensureNetwork(args.NAME), args.JSON, util);
+    }
+
+    lastTrainingImportInfo(args) {
+      const network = ensureNetwork(args.NAME);
+      const info = network.lastImport || { count: 0, from: "none", importedBy: "" };
+      return `${info.count || 0} samples from ${info.from || "none"}`;
     }
 
     train(args) {
@@ -1531,19 +1919,27 @@
       );
     }
 
-    addFunctionSamplesBlock(args) {
+    addFunctionSamplesBlock(args, util) {
       addFunctionSamples(
         ensureNetwork(args.NAME),
         args.FORMULA,
         args.START,
         args.END,
-        args.COUNT
+        args.COUNT,
+        ownerInfoFromUtil(util)
       );
     }
 
-    trainFunction(args) {
+    trainFunction(args, util) {
       const network = ensureNetwork(args.NAME);
-      addFunctionSamples(network, args.FORMULA, args.START, args.END, args.COUNT);
+      addFunctionSamples(
+        network,
+        args.FORMULA,
+        args.START,
+        args.END,
+        args.COUNT,
+        ownerInfoFromUtil(util)
+      );
       const epochs = clampInteger(args.EPOCHS, 1, 100000);
       for (let epoch = 0; epoch < epochs; epoch += 1) {
         trainEpoch(network);
@@ -1590,6 +1986,50 @@
 
     steerSprite(args, util) {
       runSteeringController(args, util, 12);
+    }
+
+    withCustomMovement(args, util) {
+      const move = computeCustomMoveIntent(args, util, 12);
+      return Boolean(move && move.requested);
+    }
+
+    chooseCustomMove(args, util) {
+      computeCustomMoveIntent(args, util, 12);
+    }
+
+    customMoveReady(args) {
+      const move = ensureControllerNetwork(args.NAME).customMove || {};
+      return Boolean(move.requested);
+    }
+
+    customMoveDirection(args) {
+      const move = ensureControllerNetwork(args.NAME).customMove || {};
+      return Number.isFinite(Number(move.desiredDirection)) ? Number(move.desiredDirection) : 90;
+    }
+
+    customMoveTurn(args) {
+      const move = ensureControllerNetwork(args.NAME).customMove || {};
+      return Number.isFinite(Number(move.desiredTurn)) ? Number(move.desiredTurn) : 0;
+    }
+
+    customMoveX(args) {
+      const move = ensureControllerNetwork(args.NAME).customMove || {};
+      return Number.isFinite(Number(move.desiredX)) ? Number(move.desiredX) : 0;
+    }
+
+    customMoveY(args) {
+      const move = ensureControllerNetwork(args.NAME).customMove || {};
+      return Number.isFinite(Number(move.desiredY)) ? Number(move.desiredY) : 0;
+    }
+
+    customMoveSpeed(args) {
+      const move = ensureControllerNetwork(args.NAME).customMove || {};
+      return Number.isFinite(Number(move.speed)) ? Number(move.speed) : 0;
+    }
+
+    customMoveReason(args) {
+      const move = ensureControllerNetwork(args.NAME).customMove || {};
+      return move.reason || (move.requested ? "move" : "not requested");
     }
 
     showTrainingGhosts(args) {
@@ -1696,6 +2136,7 @@
       networks[name].trainingGhosts = network.trainingGhosts;
       networks[name].pretrain = network.pretrain;
       networks[name].recovery = network.recovery;
+      networks[name].customMove = network.customMove;
     }
 
     exportNetwork(args) {
@@ -1753,6 +2194,16 @@
             reason: "not run",
             samples: 0,
             epochs: 0,
+          },
+          customMove: imported.customMove || {
+            requested: false,
+            reason: "not requested",
+            desiredDirection: 90,
+            desiredTurn: 0,
+            desiredX: 0,
+            desiredY: 0,
+            speed: 4,
+            train: 0,
           },
           lastInputs: Array.isArray(imported.lastInputs) ? imported.lastInputs : [],
           lastPrediction: Array.isArray(imported.lastPrediction) ? imported.lastPrediction : [],
